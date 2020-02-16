@@ -11,6 +11,13 @@ module module_hdf5
    public   :: hdf5_dataset_size
    public   :: hdf5_add_group
    public   :: hdf5_read_data, hdf5_write_data
+   public   :: hdf5_read_attribute
+   public   :: hdf5_read_dataset_compound
+
+   interface hdf5_read_attribute
+      module procedure read_attribute_int4
+      module procedure read_attribute_real4
+   end interface hdf5_read_attribute
 
    interface hdf5_read_data
       module procedure read_dataset_0d_string
@@ -22,6 +29,7 @@ module module_hdf5
       module procedure read_dataset_1d_int8
       module procedure read_dataset_1d_real4
       module procedure read_dataset_1d_real8
+      module procedure read_dataset_2d_real4
    end interface hdf5_read_data
    
    interface hdf5_write_data
@@ -348,6 +356,47 @@ contains
       call h5dclose_f(dataset_id,error) ! close data set
       
    end subroutine write_dataset_2d_real4
+
+   ! ===========================================================================================================
+   ! subroutines used by interface hdf5_read_attribute
+   ! ===========================================================================================================
+
+   subroutine read_attribute_int4(attribute,buff)
+
+      implicit none
+      character(*),intent(in)             :: attribute
+      integer(hid_t)                      :: attribute_id
+      integer*4                           :: err
+      integer*4                           :: buff
+      integer(hsize_t), dimension(1)      :: dims = (/1/)
+
+      CALL h5aopen_f(file_id, attribute, attribute_id, err)
+      CALL h5aread_f(attribute_id, H5T_NATIVE_INTEGER, buff,dims, err)
+      CALL h5aclose_f(attribute_id , err)
+
+   end subroutine
+
+   subroutine read_attribute_real4(group,attribute,buff)
+
+      implicit none
+      character(*),intent(in)             :: attribute,group
+      integer(hid_t)                      :: attribute_id, group_id
+      integer*4                           :: err
+      real*4                              :: buff
+      real*8                              :: buff2
+      integer(hsize_t), dimension(1)      :: dims = (/1/)
+
+      CALL h5gopen_f(file_id, group, group_id, err)
+      CALL h5aopen_f(group_id, attribute, attribute_id, err)
+      CALL h5aread_f(attribute_id, H5T_NATIVE_DOUBLE, buff2,dims, err)
+      CALL h5aclose_f(attribute_id , err)
+      CALL h5gclose_f(group_id, err)
+
+      ! Cast this to a real4 for the moment
+      buff=buff2
+
+   end subroutine
+
    
    
    ! ===========================================================================================================
@@ -377,137 +426,187 @@ contains
    
    end subroutine read_dataset_0d_string
    
-   subroutine read_dataset_0d_int4(dataset, dat, convert)
+   subroutine read_dataset_0d_int4(dataset, dat, field_name, convert)
    
       implicit none
       character(*),intent(in)          :: dataset
       integer*4,intent(inout)          :: dat
       logical,intent(in),optional      :: convert
+      character(*),intent(in),optional :: field_name ! Required if reading a compound datatype
       character(2),parameter           :: expected_type = 'i4'
       
-      call read_numeric(dataset, 1, expected_type, convert)
+      call read_numeric(dataset, 1, expected_type, field_name, convert)
       dat = i4(1)
       deallocate(i4)
       
    end subroutine read_dataset_0d_int4
    
-   subroutine read_dataset_0d_int8(dataset, dat, convert)
+   subroutine read_dataset_0d_int8(dataset, dat, field_name, convert)
    
       implicit none
       character(*),intent(in)          :: dataset
       integer*8,intent(inout)          :: dat
       logical,intent(in),optional      :: convert
+      character(*),intent(in),optional :: field_name ! Required if reading a compound datatype
       character(2),parameter           :: expected_type = 'i8'
       
-      call read_numeric(dataset, 1, expected_type, convert)
+      call read_numeric(dataset, 1, expected_type, field_name, convert)
       dat = i8(1)
       deallocate(i8)
       
    end subroutine read_dataset_0d_int8
    
-   subroutine read_dataset_0d_real4(dataset, dat, convert)
+   subroutine read_dataset_0d_real4(dataset, dat, field_name, convert)
    
       implicit none
       character(*),intent(in)          :: dataset
       real*4,intent(inout)             :: dat
       logical,intent(in),optional      :: convert
+      character(*),intent(in),optional :: field_name ! Required if reading a compound datatype
       character(2),parameter           :: expected_type = 'r4'
       
-      call read_numeric(dataset, 1, expected_type, convert)
+      call read_numeric(dataset, 1, expected_type, field_name, convert)
       dat = r4(1)
       deallocate(r4)
       
    end subroutine read_dataset_0d_real4
    
-   subroutine read_dataset_0d_real8(dataset, dat, convert)
+   subroutine read_dataset_0d_real8(dataset, dat, field_name, convert)
    
       implicit none
       character(*),intent(in)          :: dataset
       real*8,intent(inout)             :: dat
       logical,intent(in),optional      :: convert
+      character(*),intent(in),optional :: field_name ! Required if reading a compound datatype
       character(2),parameter           :: expected_type = 'r8'
       
-      call read_numeric(dataset, 1, expected_type, convert)
+      call read_numeric(dataset, 1, expected_type, field_name, convert)
       dat = r8(1)
       deallocate(r8)
       
    end subroutine read_dataset_0d_real8
    
-   subroutine read_dataset_1d_int4(dataset, dat, convert)
+   subroutine read_dataset_1d_int4(dataset, dat, field_name, convert)
    
       implicit none
       character(*),intent(in)          :: dataset
       integer*4,intent(inout)          :: dat(:)
       logical,intent(in),optional      :: convert
+      character(*),intent(in),optional :: field_name ! Required if reading a compound datatype
       character(2),parameter           :: expected_type = 'i4'
       
-      call read_numeric(dataset, int(size(dat),4), expected_type, convert)
+      call read_numeric(dataset, int(size(dat),4), expected_type, field_name, convert)
       dat = i4
       deallocate(i4)
       
    end subroutine read_dataset_1d_int4
    
-   subroutine read_dataset_1d_int8(dataset, dat, convert)
+   subroutine read_dataset_1d_int8(dataset, dat, field_name, convert)
    
       implicit none
       character(*),intent(in)          :: dataset
       integer*8,intent(inout)          :: dat(:)
       logical,intent(in),optional      :: convert
+      character(*),intent(in),optional :: field_name ! Required if reading a compound datatype
       character(2),parameter           :: expected_type = 'i8'
       
-      call read_numeric(dataset, int(size(dat),4), expected_type, convert)
+      call read_numeric(dataset, int(size(dat),4), expected_type, field_name, convert)
       dat = i8
       deallocate(i8)
       
    end subroutine read_dataset_1d_int8
    
-   subroutine read_dataset_1d_real4(dataset, dat, convert)
+   subroutine read_dataset_1d_real4(dataset, dat, field_name, convert)
    
       implicit none
       character(*),intent(in)          :: dataset
       real*4,intent(inout)             :: dat(:)
       logical,intent(in),optional      :: convert
+      character(*),intent(in),optional :: field_name ! Required if reading a compound datatype
       character(2),parameter           :: expected_type = 'r4'
       
-      call read_numeric(dataset, int(size(dat),4), expected_type, convert)
+      call read_numeric(dataset, int(size(dat),4), expected_type, field_name, convert)
       dat = r4
       deallocate(r4)
       
    end subroutine read_dataset_1d_real4
    
-   subroutine read_dataset_1d_real8(dataset, dat, convert)
+   subroutine read_dataset_1d_real8(dataset, dat, field_name, convert)
    
       implicit none
       character(*),intent(in)          :: dataset
       real*8,intent(inout)             :: dat(:)
       logical,intent(in),optional      :: convert
+      character(*),intent(in),optional :: field_name ! Required if reading a compound datatype
       character(2),parameter           :: expected_type = 'r8'
-      
-      call read_numeric(dataset, int(size(dat),4), expected_type, convert)
+
+      call read_numeric(dataset, int(size(dat),4), expected_type, field_name, convert)
       dat = r8
       deallocate(r8)
       
    end subroutine read_dataset_1d_real8
+
+   subroutine read_dataset_2d_real4(dataset, dat, field_name, convert)
    
-   subroutine read_numeric(dataset, n, expected_type, convert)
+      implicit none
+      character(*),intent(in)          :: dataset
+      real*4,intent(inout)             :: dat(:,:)
+      logical,intent(in),optional      :: convert
+      character(*),intent(in),optional :: field_name ! Required if reading a compound datatype
+      character(2),parameter           :: expected_type = 'r4'
+      character(2)                     :: detected_type
+      integer*4                        :: err, class, sign, index
+      integer(hsize_t)                 :: array_dims(2)
+      integer(hid_t)                   :: dataset_id, datatype_id,compound_datatype_id
+      integer(hid_t)                   :: hdf_type
+      character(255)                   :: msg
+      integer(size_t)                  :: size
+      integer(size_t)                  :: offset=0
+      TYPE(C_PTR) :: f_ptr
+
+      call h5dopen_f(file_id, dataset, dataset_id, err)
+
+      ! Open up the dataset and extract its datatype
+      call h5dget_type_f(dataset_id,compound_datatype_id,err)
+
+      ! Find the index of the member we want to read and find its type
+      call h5tget_member_index_f(compound_datatype_id,field_name,index,err)
+      call h5tget_member_type_f(compound_datatype_id,index,datatype_id,err)
+
+      call h5tget_array_dims_f(datatype_id, array_dims, err)
+
+      ! Get the array datatype
+      call h5tget_size_f(datatype_id, size, err)
+
+      call h5tcreate_f(H5T_COMPOUND_F, size, hdf_type, err)
+      call h5tinsert_f(hdf_type, field_name, offset, datatype_id, err)
+
+      call h5dread_f(dataset_id, hdf_type, dat, array_dims, err)
+
+      call h5dclose_f(dataset_id, err)
+
+   end subroutine read_dataset_2d_real4
+
+   subroutine read_numeric(dataset, n, expected_type, field_name, convert)
    
       character(*),intent(in)             :: dataset
       integer*4,intent(in)                :: n
       character(2),intent(in)             :: expected_type
       logical,intent(in),optional         :: convert
+      character(*),intent(in),optional    :: field_name ! Required if reading a compound datatype
       character(2)                        :: detected_type
-      integer*4                           :: err
+      integer*4                           :: err, class, sign, index
       integer(hsize_t)                    :: size(2)
       integer(hid_t)                      :: dataset_id
       integer(hid_t)                      :: hdf_type
       character(255)                      :: msg
-         
+
       call h5dopen_f(file_id, dataset, dataset_id, err)
-      call get_mem_type_id(dataset_id, hdf_type, detected_type)
+      call get_mem_type_id(dataset_id, hdf_type, detected_type, field_name)
       
       if (detected_type.ne.expected_type) then
-         write(msg,'(6A)') 'Expected type ',expected_type,' but detected type ', &
-         & detected_type,' in dataset ',dataset
+         write(msg,'(7A)') 'Expected type ',expected_type,' but detected type ', &
+         & detected_type,' in dataset ',dataset, field_name
          if (present(convert)) then
             if (.not.convert) then
                call error(trim(msg))
@@ -562,24 +661,52 @@ contains
       call h5dclose_f(dataset_id, err)
       
    end subroutine read_numeric
+
    
-   subroutine get_mem_type_id(dataset_id, hdf_type, fortran_type)
+   subroutine get_mem_type_id(dataset_id, hdf_type, fortran_type, field_name)
 
       implicit none
    
       integer(hid_t),intent(in)        :: dataset_id
       integer(hid_t),intent(out)       :: hdf_type
       character(2),intent(out)         :: fortran_type
-      integer*4                        :: err, class, sign
+      character(*),intent(in),optional :: field_name ! Required if reading a compound datatype
+      integer*4                        :: err, class, sign, index
       integer(size_t)                  :: size
       integer(hid_t)                   :: datatype_id
+      integer(hid_t)                   :: compound_datatype_id
+      integer(hid_t)                   :: base_datatype_id
+      integer(size_t)                  :: array_dims(1)
+      integer(size_t)                  :: offset=0
 
-      call h5dget_type_f(dataset_id, datatype_id, err)
-      call h5tget_class_f(datatype_id, class, err)
-      call h5tget_size_f(datatype_id, size, err) 
-      call h5tget_sign_f(datatype_id, sign, err)
-      
-      if (class == 0) then ! integer
+      if(field_name=='') then
+         call h5dget_type_f(dataset_id, datatype_id, err)
+         call h5tget_class_f(datatype_id, class, err)
+         call h5tget_size_f(datatype_id, size, err)
+         call h5tget_sign_f(datatype_id, sign, err)
+      else
+         ! Open up the dataset and extract its datatype
+         call h5dget_type_f(dataset_id,compound_datatype_id,err)
+
+         ! Find the index of the member we want to read and find its type
+         call h5tget_member_index_f(compound_datatype_id,field_name,index,err)
+         call h5tget_member_type_f(compound_datatype_id,index,datatype_id,err)
+
+         ! Get the info for the member
+         call h5tget_class_f(datatype_id, class, err)
+         call h5tget_size_f(datatype_id, size, err)
+         call h5tget_sign_f(datatype_id, sign, err)
+      end if
+
+      ! First check if the class is an array, if so we need get the datatype in the array
+      if (class == h5t_array_f) then
+         call h5tget_super_f(datatype_id,base_datatype_id,err)
+         call h5tget_class_f(base_datatype_id, class, err)
+         call h5tget_size_f(base_datatype_id, size, err)
+         call h5tget_sign_f(base_datatype_id, sign, err)
+      end if
+
+      if (class == h5t_integer_f) then ! integer
          if (size == 4) then
             if (sign == 0) then
                hdf_type = H5T_STD_U32LE
@@ -599,7 +726,7 @@ contains
          else
             call error('Unknown type')
          end if
-      else if (class == 1) then ! floating point
+      else if (class == h5t_float_f) then ! floating point
          if (size == 4) then
             hdf_type = H5T_IEEE_F32LE
          else if (size == 8) then
@@ -617,6 +744,65 @@ contains
          write(fortran_type,'(A,I0)') 'r',size
       end if
 
+      ! If there is a field name we need to create a compound datatype to know which field to read in
+      if(field_name.ne.'') then
+         ! Create a new compound datatype to contain the field we want to read in
+         call h5tcreate_f(H5T_COMPOUND_F, size, hdf_type, err)
+         call h5tinsert_f(hdf_type, field_name, offset, datatype_id, err)
+      end if
+
    end subroutine get_mem_type_id
+
+
+   subroutine hdf5_read_dataset_compound(dataset,field_name,dat)
+
+      implicit none
+      character(*),intent(in)             :: dataset
+      character(*),intent(in)             :: field_name
+      integer*4                           :: index
+      integer*4                           :: err
+      integer*4                           :: nmemb
+      integer(hsize_t) ,DIMENSION(1)      :: isize
+      integer(hid_t)                      :: dataset_id
+      integer(hid_t)                      :: datatype_id
+      integer(hid_t)                      :: feild_datatype_id
+      integer(hid_t)                      :: compound_datatype_id
+      integer(hid_t)                      :: hdf_type
+      integer(size_t)                     :: type_size
+      integer(size_t)                     :: typesize
+      integer(size_t)                     :: offset=0
+      character(255)                      :: member_name
+      integer*8,intent(inout)             :: dat(:)
+      integer*4                           :: n
+      n=int(size(dat),4)
+
+      isize(1)=n
+
+      ! Open up the dataset and extract its datatype
+      call h5dopen_f(file_id, dataset, dataset_id, err)
+      call h5dget_type_f(dataset_id,datatype_id,err)
+
+      ! Find the index of the member we want to read and find its type
+      call h5tget_member_index_f(datatype_id,field_name,index,err)
+      call h5tget_member_type_f(datatype_id,index,feild_datatype_id,err)
+
+      ! Get the size of the datatype
+      call h5tget_size_f(feild_datatype_id,type_size,err)
+
+      ! Create a new compound datatype to contain the field we want to read in
+      call h5tcreate_f(H5T_COMPOUND_F, type_size, compound_datatype_id, err)
+      call h5tinsert_f(compound_datatype_id, field_name, offset, feild_datatype_id, err)
+
+      allocate(i8(n))
+      call h5dread_f(dataset_id, compound_datatype_id, i8 , isize, err)
+
+      call h5tclose_f(datatype_id,err)
+      call h5tclose_f(compound_datatype_id,err)
+      call h5dclose_f(dataset_id,err)
+
+      dat = i8
+      deallocate(i8)
+
+   end subroutine hdf5_read_dataset_compound
    
 end module module_hdf5
