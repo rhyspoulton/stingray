@@ -35,6 +35,9 @@ endif
 ifeq ($(system),hyades) # in-house cluster at ICRAR/UWA
    hdfflags = -I/opt/bldr/local/storage/hdf5/1.10.2/include -L/opt/bldr/local/storage/hdf5/1.10.2/lib -lhdf5_fortran -lhdf5
 endif
+ifeq ($(system),ozstar)
+   hdfflags = -I/apps/skylake/software/mpi/gcc/7.3.0/openmpi/3.0.0/hdf5/1.10.1/include -L/apps/skylake/software/mpi/gcc/7.3.0/openmpi/3.0.0/hdf5/1.10.1/lib -lhdf5_fortran -lhdf5
+endif
 ifeq ($(hdfflags),empty)
    $(info ERROR unknown system: '${system}')
 stop
