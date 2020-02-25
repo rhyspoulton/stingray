@@ -52,22 +52,20 @@ character(len=255),parameter  :: parameter_filename_default = &
 
 type type_sam
 
-   integer*8   :: ID             ! unique galaxy ID
-   integer*8   :: HaloID         ! unique ID of parent halo
-   integer*4   :: snapshot       ! snapshot ID
-   integer*4   :: core           ! core  index
-   integer*4   :: type           ! galaxy type ?
-   real*4      :: pos(3)         ! [Mpc/h] position of galaxy centre in simulation box
-   real*4      :: vel(3)         ! [proper km/s] peculiar velocity
-   real*4      :: J(3)           ! [proper Msun/h pMpc/h km/s] angular momentum
-   real*4      :: stellarmass    ! [Msun/h] stellar mass 
-   real*4      :: hotgas         ! [Msun/h] hot gass mass
-   real*4      :: coldgas        ! [Msun/h] cold gass mass
-   real*4      :: HIMass         ! [Msun/h] atomic gas mass disk
-   real*4      :: H2Mass         ! [Msun/h] molecular gas mass bulge
-   real*4      :: mvir           ! [Msun/h]
-   real*4      :: vvir           ! [km/s] virial velocity of subhalo
-   real*4      :: vmax           ! [km/s] maximum circular velocity of subhalo
+   integer*8   :: ID                               ! unique galaxy ID
+   integer*8   :: HaloID                           ! unique ID of parent halo
+   integer*4   :: snapshot                         ! snapshot ID
+   integer*4   :: core                             ! core  index
+   integer*4   :: type                             ! galaxy type ?
+   real*4      :: pos(3)                           ! [Mpc/h] position of galaxy centre in simulation box
+   real*4      :: vel(3)                           ! [proper km/s] peculiar velocity
+   real*4      :: StellarMass                      ! [Msun/h yr] Stellar Mass of galaxy
+   real*4      :: Sfr                              ! [Msun/h yr] Star formation rate
+   real*4      :: BlackHoleMass                    ! [Msun/h] Black hole mass
+   real*4      :: BlackHoleAccretedHotMass         ! [Msun/h] Black hole accreted hot mass
+   real*4      :: dt                               ! [yr] Time between outputs
+   real*4      :: Spin                             ! [Msun/h] Spin of black hole
+   real*4      :: mvir                             ! [Msun/h] Virial mass of subhalo
    
 contains
 
@@ -86,7 +84,7 @@ end type type_sam
 type type_sky
 
    integer*4   :: snapshot       ! snapshot ID
-   integer*4   :: core      ! core index
+   integer*4   :: core           ! core index
    integer*4   :: tile           ! tile ID
    real*4      :: zobs           ! redshift in observer-frame
    real*4      :: zcmb           ! redshift in CMB frame
@@ -96,7 +94,7 @@ type type_sky
    real*4      :: dec            ! [rad] declination
    real*4      :: vpec(3)        ! [proper km/s] 3D peculiar velocity
    real*4      :: vpecrad        ! [proper km/s] radial peculiar velocity
-   integer*8   :: HaloID_sam    ! galaxy parent halo ID in the SAM
+   integer*8   :: HaloID_sam     ! galaxy parent halo ID in the SAM
    integer*8   :: id_group_sky   ! unique group ID in the mock sky
    
    contains
@@ -110,51 +108,18 @@ type,extends(type_sky) :: type_sky_galaxy ! must exist
    integer*8   :: id_galaxy_sky           ! unique ID in the mock sky
    integer*8   :: id_galaxy_sam           ! galaxy ID in the SAM
    integer*4   :: type                    ! galaxy type (0=central, 1=satellite, 2=orphan)
-   
-   real*4      :: inclination             ! [rad] inclination
-   real*4      :: pa                      ! [rad] position angle from North to East
-   real*4      :: mag                     ! apparent magnitude (generic: M/L ratio of 1, no k-correction)
 
-   real*4      :: stellarmass             ! [Msun/h] hot gass mass   
-   real*4      :: hotgas                  ! [Msun/h] hot gass mass
-   real*4      :: coldgas                 ! [Msun/h] cold gass mass
-   real*4      :: HIMass                  ! [Msun/h] atomic gas mass disk
-   real*4      :: H2Mass                  ! [Msun/h] molecular gas mass bulge
+   real*8      :: StellarMass                      ! [Msun/h yr] Stellar Mass of galaxy
+   real*8      :: Sfr                              ! [Msun/h yr] Star formation rate
+   real*8      :: BlackHoleMass                    ! [Msun/h] Black hole mass
+   real*8      :: BlackHoleAccretedHotMass         ! [Msun/h] Black hole accreted hot mass
+   real*8      :: dt                               ! [yr] Time between outputs
+   real*8      :: Spin                             ! [Msun/h] Spin of black
+
+   real*8      :: fluxBH         ! Black Hole Flux
+   real*8      :: fluxStars      ! Stars Flux
    
-   real*4      :: J(3)                    ! [Msun pMpc km/s] total angular momentum
-   
-   real*4      :: mvir                    ! [Msun/h] mass 
-   
-   real*4      :: vvir           ! [km/s] virial velocity of subhalo
-   real*4      :: vmax           ! [km/s] maximum circular velocity of subhalo
-   
-   ! HI line
-   real*4      :: hiline_flux_int         ! [W/m^2] integrated HI line flux
-   real*4      :: hiline_flux_int_vel     ! [Jy km/s] velocity-integrated HI line flux
-   real*4      :: hiline_flux_peak        ! [s/km] normalised peak HI line flux density of inclined galaxy (multiply by hiline_flux_int_vel to get Jy)
-   real*4      :: hiline_flux_central     ! [s/km] normalised central HI line flux density of inclined galaxy
-   real*4      :: hiline_width_peak       ! [km/s] line width of inclined galaxy in rest-frame velocity at peak flux
-   real*4      :: hiline_width_50         ! [km/s] line width of inclined galaxy in rest-frame velocity at 50% or peak flux
-   real*4      :: hiline_width_20         ! [km/s] line width of inclined galaxy in rest-frame velocity at 20% of peak flux
-   real*4      :: hiline_flux_peak_eo     ! [s/km] peak HI line flux density of edge-on galaxy
-   real*4      :: hiline_flux_central_eo  ! [s/km] central HI line flux density of edge-on galaxy
-   real*4      :: hiline_width_peak_eo    ! [km/s] line width of edge-on galaxy in rest-frame velocity at peak flux
-   real*4      :: hiline_width_50_eo      ! [km/s] line width of edge-on galaxy in rest-frame velocity at 50% or peak flux
-   real*4      :: hiline_width_20_eo      ! [km/s] line width of edge-on galaxy in rest-frame velocity at 20% of peak flux
-   
-   ! CO (1-0) line
-   real*4      :: coline_flux_int         ! [W/m^2] integrated CO(1-0) line flux
-   real*4      :: coline_flux_int_vel     ! [Jy km/s] velocity-integrated CO(1-0) line flux
-   real*4      :: coline_flux_peak        ! [s/km] peak CO line flux density of inclined galaxy (multiply by coline_flux_int_vel to get Jy)
-   real*4      :: coline_flux_central     ! [s/km] central CO line flux density of inclined galaxy
-   real*4      :: coline_width_peak       ! [km/s] line width of inclined galaxy in rest-frame velocity at peak flux
-   real*4      :: coline_width_50         ! [km/s] line width of inclined galaxy in rest-frame velocity at 50% or peak flux
-   real*4      :: coline_width_20         ! [km/s] line width of inclined galaxy in rest-frame velocity at 20% of peak flux
-   real*4      :: coline_flux_peak_eo     ! [s/km] peak CO line flux density of edge-on galaxy
-   real*4      :: coline_flux_central_eo  ! [s/km] central CO line flux density of edge-on galaxy
-   real*4      :: coline_width_peak_eo    ! [km/s] line width of edge-on galaxy in rest-frame velocity at peak flux
-   real*4      :: coline_width_50_eo      ! [km/s] line width of edge-on galaxy in rest-frame velocity at 50% or peak flux
-   real*4      :: coline_width_20_eo      ! [km/s] line width of edge-on galaxy in rest-frame velocity at 20% of peak flux
+   real*4      :: mvir           ! [Msun/h] mass
    
    contains
    
@@ -166,9 +131,6 @@ end type type_sky_galaxy
 type,extends(type_sky) :: type_sky_group ! must exist
    
    real*4      :: mvir                 ! [Msun/h] virial mass of group
-   real*4      :: vvir                 ! [km/s]	virial velocity of group halo
-   real*4      :: vmax                 ! [km/s]	maximum circular velocity of group halo
-   real*4      :: cnfw                 ! [-] concentration of NFW fit to group halo
    integer*4   :: group_ntot           ! total number of galaxies in group
    integer*4   :: group_nsel           ! number of selected galaxies in group
    integer*4   :: group_flag           ! 0=group complete, >0 group truncated
@@ -269,14 +231,18 @@ subroutine make_sky_galaxy(sky_galaxy,sam,base,groupid,galaxyid)
    real*4                              :: pos(3)               ! [simulation length units] position vector of galaxy
    real*4                              :: dl                   ! [simulation length units] luminosity distance to observer
    real*4                              :: elos(3)              ! unit vector pointing from the observer to the object in comoving space
-   real*4                              :: mstars,mHI,mH2,LCO
-   
+   real*4                              :: LBH,LStars,fluxBH,fluxStars
+   real*4                              :: frequency0 = 1420e6
+   real*4                              :: frequency = 1500e6
+   real*4                              :: mu = 0.8
+   real*4                              :: sigma = 0.09
+
    call nil(sky_galaxy,sam,base,groupid,galaxyid) ! dummy statement to avoid compiler warnings
    
    ! basics
    call make_sky_object(sky_galaxy,sam,base,groupid)
    
-   
+
    ! INTRINSIC PROPERTIES
    
    ! make IDs
@@ -288,55 +254,155 @@ subroutine make_sky_galaxy(sky_galaxy,sam,base,groupid,galaxyid)
    
    ! intrinsic halo properties
    sky_galaxy%mvir   = sam%mvir
-   sky_galaxy%vvir   = sam%vvir
-   sky_galaxy%vmax   = sam%vmax
    
    ! intrinsic masses
-   sky_galaxy%stellarmass     = sam%stellarmass
-   sky_galaxy%HotGas          = sam%HotGas
-   sky_galaxy%ColdGas         = sam%ColdGas 
-   sky_galaxy%HIMass          = sam%HIMass
-   sky_galaxy%H2Mass          = sam%H2Mass
+   sky_galaxy%Sfr                      = sam%Sfr
+   sky_galaxy%BlackHoleMass            = sam%BlackHoleMass
+   sky_galaxy%BlackHoleAccretedHotMass = sam%BlackHoleAccretedHotMass
+   sky_galaxy%dt                       = sam%dt
+   sky_galaxy%Spin                     = sam%Spin
    
    ! intrinsic angular momentum
    pseudo_rotation   = tile(base%tile)%Rpseudo
-   sky_galaxy%J      = rotate(pseudo_rotation,sam%J)
-   
-      
+
    ! APPARENT PROPERTIES
-   
-   ! inclination and position angle
-   call sph2car(sky_galaxy%dc,sky_galaxy%ra,sky_galaxy%dec,pos)
-   elos = pos/norm(pos) ! position vector
-   call make_inclination_and_pa(pos,sky_galaxy%J,inclination=sky_galaxy%inclination,pa=sky_galaxy%pa)
-   
-   ! rough generic optical magnitude
-   dl = sky_galaxy%dc*(1+sky_galaxy%zobs) ! [Mpc/h]
-   mstars = (sam%stellarmass+sam%stellarmass)/para%h ! [Msun]
-   sky_galaxy%mag = convert_absmag2appmag(convert_stellarmass2absmag(mstars,1.0),dl/para%h)
-      
-   ! cold gas emission lines
-   mHI = (sam%HIMass)/1.35 ! [Msun/h] HI mass  
-   mH2 = (sam%H2Mass)/1.35 ! [Msun/h] H2 mass
-   sky_galaxy%hiline_flux_int = real(convert_luminosity2flux(real(mHI/para%h,8)*real(L2MHI,8)*Lsun,dl/para%h),4) ! [W/m^2]
-   sky_galaxy%hiline_flux_int_vel = convert_intflux2velintflux(sky_galaxy%hiline_flux_int,0.21106114,sky_galaxy%zobs)
-   LCO = mH2/para%h/(313*X_CO) ! [Jy km/s Mpc^2] CO(1-0) luminosity (note this equation has a J^2 dependence)
-   sky_galaxy%coline_flux_int = LCO/(4.0*pi*(dl/para%h)**2)/0.00260075761e23 ! [W/m^2] integrated flux
-   sky_galaxy%coline_flux_int_vel = convert_intflux2velintflux(sky_galaxy%hiline_flux_int,0.00260075761,sky_galaxy%zobs)
-   if (para%line_parameters==1) call make_line_profiles
+
+   ! Compute the luminosity of the BH and Stars
+
+   LBH = Lnu_BH(sky_galaxy,1.4e9)
+
+   fluxBH = fluxDensity(LBH,snapshot(sam%snapshot)%redshift)
+
+   sky_galaxy%fluxBH = scaledFluxDensity(fluxBH,frequency,frequency0,mu,sigma,snapshot(sam%snapshot)%redshift,.false.)
+
+   LStars = Lnu_SFR(sky_galaxy%SFR)
+
+   fluxStars = fluxDensity(LBH,snapshot(sam%snapshot)%redshift)
+
+   sky_galaxy%fluxStars = scaledFluxDensity(fluxStars,frequency,frequency0,mu,sigma,snapshot(sam%snapshot)%redshift,.true.)
    
 contains
-   
-   subroutine make_line_profiles
+
+   function M_Eddington(BHMass) result(rate_Eddington)
+
+      implicit none
+      real*8,intent(in)                       :: BHMass
+      real*8                                  :: rate_Eddington
+      real*8,parameter                        :: eScatteringOpacity=0.3
+      real*8,parameter                        :: accretionEfficiency=0.1
+      real*8                                  :: L_Eddington
+
+      L_Eddington = 4 * pi * G * BHMass * c /  (eScatteringOpacity* 0.01**2 / 0.001) ! [g] [m]^4 / ([cm]^2 [s]3)
+
+      rate_Eddington = L_Eddington / c**2 * (100 * 0.01)**2 * (0.001 / 0.001 ) / accretionEfficiency ! [kg]/[s]
+
+   end function M_Eddington
+
+   function Lnu_BH(sky_galaxy,nu) result(Lnu)
    
       implicit none
-      type(type_lineinput)                :: line_input
-      type(type_line)                     :: line(4)
-      real*4                              :: a,c_halo,cMpch2pkpc,rvir
-      real,parameter                      :: G = 4.3022682e-6     ! [(km/s)^2 kpc/Msun] gravitational constant
+      type(type_sky_galaxy),intent(inout)    :: sky_galaxy
+      real*4,intent(in)                      :: nu
+      real*8                                 :: accretion_rate
+      real*8                                 :: M_Eddinton_rate
+      real*8                                 :: BHMass
+      real*8                                 :: dm
+      real*8                                 :: dt
+      real*8                                 :: normalization
+      real*8                                 :: Ljet_radiomode
+      real*8                                 :: Ljet_quasar
+      real*8                                 :: Lnu
+
+      BHMass = sky_galaxy%BlackHoleMass * 1e10 * Msun ! kg
+
+      dm = (sky_galaxy%BlackHoleAccretedHotMass+sky_galaxy%BlackHoleAccretedHotMass)*1e10 * Msun
+      dt = sky_galaxy%dt*1e6*365*24*60*60
+      accretion_rate = dm/dt
+      accretion_rate = accretion_rate/M_Eddington(BHMass)
+
+      if (accretion_rate>0) then
+
+         if(accretion_rate<=0.01) then ! radio mode
+            normalization = 8e-5
+
+            Ljet_radiomode = 2.0_8 * 1E45_8 * BHMass / 10**9_8 / Msun * accretion_rate / 0.01_8 * sky_galaxy%Spin**2
+
+            Lnu = normalization * (BHMass / 10**9 / Msun * accretion_rate / 0.01)**0.42 * Ljet_radiomode / nu
+
+         else ! quasar mode
+
+            normalization = 5e-2
+
+            Ljet_quasar = 2.5 * 1E43_8 * (BHMass / 10**9 / Msun)**1.1 * (accretion_rate / 0.01)**1.2 * sky_galaxy%Spin**2
+
+            Lnu = normalization * (BHMass / 10**9 / Msun)**0.32 * (accretion_rate / 0.01)**(-1.2) * Ljet_quasar / nu
+
+         end if
+
+      end if
    
-         
-   end subroutine make_line_profiles
+   end function Lnu_BH
+
+
+   function Lnu_SFR(SFR) result(Lnu)
+
+      implicit none
+      real*8,intent(in)                      :: SFR
+      real*8                                 :: Lnu
+
+      Lnu =  SFR / (0.75 * 10**(-21)) ! [erg] /[s] /[Hz]
+
+   end function Lnu_SFR
+
+   function fluxDensity(Luminosity,redshift) result(flux)
+
+      implicit none
+      real*4,intent(in)                      :: Luminosity
+      real*4,intent(in)                      :: redshift
+      real*8                                 :: distance
+      real*8                                 :: prefactor
+      real*8                                 :: flux
+
+      distance = redshift_to_dc(redshift) * Mpc * 100 ! [m]
+
+      prefactor = 10e26_8 / (4 * pi *  distance**2 )
+
+      flux =  prefactor * Luminosity ! [erg] /[s] /[cm]^2 /[Hz] or [Jy]
+
+   end function fluxDensity
+
+   function frequencyRedshift(redshift,basefrequency) result(frequency)
+      implicit none
+      real*4,intent(in)                      :: redshift
+      real*4,intent(in)                      :: basefrequency
+      real*4                                 :: frequency
+
+      frequency = basefrequency / (redshift + 1)
+
+   end function frequencyRedshift
+
+   function scaledFluxDensity(fluxDensity,frequency,frequency0,mu,sigma,redshift,redshiftFreq) result(scaledFlux)
+
+      implicit none
+      real*4,intent(in)                      :: fluxDensity
+      real*4,intent(in)                      :: frequency
+      real*4,intent(inout)                   :: frequency0
+      real*4,intent(in)                      :: mu
+      real*4,intent(in)                      :: sigma
+      real*4,intent(in)                      :: redshift
+      logical,intent(in)                     :: redshiftFreq
+      real*4                                 :: gamma
+      real*4                                 :: scaledFlux
+
+      gamma = get_normal_random_number(mu,sigma)
+
+      if (redshiftFreq) then
+         frequency0 = frequencyRedshift(redshift,frequency0)
+      end if
+
+      scaledFlux = fluxDensity * (frequency/frequency0)**(-gamma)
+
+   end function scaledFluxDensity
    
 end subroutine make_sky_galaxy
 
@@ -390,7 +456,7 @@ subroutine make_automatic_parameters
    call hdf5_open(filename)
    call hdf5_read_attribute('NCores',ncores)
    para%subvolume_min = 0
-   para%subvolume_max = 2 !ncores-1
+   para%subvolume_max = ncores-1
    call hdf5_read_attribute(g,'Hubble_h',para%h)
    call hdf5_read_attribute(g,'OmegaLambda',para%omega_l)
    call hdf5_read_attribute(g,'OmegaM',para%omega_m)
@@ -473,14 +539,13 @@ subroutine load_sam_snapshot(index,subindex,sam)
    sam%vel(2) = buff(:,2)
    sam%vel(3) = buff(:,3)
 
-   call hdf5_read_data(g,sam%stellarmass,field_name='StellarMass')
-   call hdf5_read_data(g,sam%hotgas,field_name='HotGas')
-   call hdf5_read_data(g,sam%coldgas,field_name='ColdGas')
-   call hdf5_read_data(g,sam%HIMass,field_name='HIMass')
-   call hdf5_read_data(g,sam%H2Mass,field_name='H2Mass')
+   call hdf5_read_data(g,sam%StellarMass,field_name='StellarMass')
+   call hdf5_read_data(g,sam%Sfr,field_name='Sfr')
+   call hdf5_read_data(g,sam%BlackHoleMass,field_name='BlackHoleMass')
+   call hdf5_read_data(g,sam%BlackHoleAccretedHotMass,field_name='BlackHoleAccretedHotMass')
+   call hdf5_read_data(g,sam%dt,field_name='dt')
+   call hdf5_read_data(g,sam%Spin,field_name='Spin')
    call hdf5_read_data(g,sam%mvir,field_name='Mvir')
-   call hdf5_read_data(g,sam%vvir,field_name="Vvir")
-   call hdf5_read_data(g,sam%vmax,field_name="Vmax")
    
    ! assign other properties
    sam%snapshot = index
@@ -520,11 +585,6 @@ subroutine make_hdf5
    
    ! load auxilary data from shark output
    write(filename,'(A,I0,A)') trim(para%path_input),para%snapshot_min,'/0/galaxies.hdf5'
-   ! call hdf5_open(filename)
-   ! call hdf5_read_data('/run_info/shark_version',shark_version)
-   ! call hdf5_read_data('/run_info/shark_git_revision',shark_git_revision)
-   ! call hdf5_read_data('/run_info/timestamp',shark_timestamp)
-   ! call hdf5_close()
 
    ! create HDF5 file
    write(seedstr,'(I0)') para%seed
@@ -613,7 +673,7 @@ subroutine make_hdf5
    close(1)
    call hdf5_add_group(trim(name))
    call hdf5_write_data(trim(name)//'/snapshot',sky_galaxy%snapshot,'snapshot index')
-   call hdf5_write_data(trim(name)//'/core',sky_galaxy%core,'core index')
+   call hdf5_write_data(trim(name)//'/icore',sky_galaxy%core,'core index')
    call hdf5_write_data(trim(name)//'/tile',sky_galaxy%tile,'tile index in tiling array')
    call hdf5_write_data(trim(name)//'/zobs',sky_galaxy%zobs,'redshift in observer-frame')
    call hdf5_write_data(trim(name)//'/zcmb',sky_galaxy%zcmb,'redshift in CMB frame')
@@ -625,23 +685,19 @@ subroutine make_hdf5
    call hdf5_write_data(trim(name)//'/id_galaxy_sam',sky_galaxy%id_galaxy_sam,'galaxy ID in SAM')
    call hdf5_write_data(trim(name)//'/HaloID_sam',sky_galaxy%HaloID_sam,'host halo ID in SAM')
    call hdf5_write_data(trim(name)//'/type',sky_galaxy%type,'galaxy type (0=central, 1=satellite in halo, 2=orphan)')
-   call hdf5_write_data(trim(name)//'/inclination',sky_galaxy%inclination/degree, &
-   & '[deg] inclination = angle between line-of-sight and spin axis')
-   call hdf5_write_data(trim(name)//'/pa',sky_galaxy%pa/degree,'[deg] position angle from north to east')
-   call hdf5_write_data(trim(name)//'/mag',sky_galaxy%mag, &
-   & 'apparent magnitude (generic: M/L ratio of 1, no k-correction)')
    call hdf5_write_data(trim(name)//'/vpec_x',sky_galaxy%vpec(1),'[proper km/s] x-component of peculiar velocity')
    call hdf5_write_data(trim(name)//'/vpec_y',sky_galaxy%vpec(2),'[proper km/s] y-component of peculiar velocity')
    call hdf5_write_data(trim(name)//'/vpec_z',sky_galaxy%vpec(3),'[proper km/s] z-component of peculiar velocity')
    call hdf5_write_data(trim(name)//'/vpec_r',sky_galaxy%vpecrad,'[proper km/s] line-of-sight peculiar velocity')
+   ! call hdf5_write_data(trim(name)//'/fluxBH',sky_galaxy%fluxBH,'[ergs/s /Hz] BlackHole flux')
+   ! call hdf5_write_data(trim(name)//'/fluxStars',sky_galaxy%fluxStars,'[ergs/s /Hz] Stars flux')
    call hdf5_write_data(trim(name)//'/stellarmass',sky_galaxy%stellarmass,'[Msun/h] stellar mass')
-   call hdf5_write_data(trim(name)//'/HotGas',sky_galaxy%HotGas,'[Msun/h] hot gas mass')
-   call hdf5_write_data(trim(name)//'/ColdGas',sky_galaxy%ColdGas,'[Msun/h] cold gas mass')
-   call hdf5_write_data(trim(name)//'/HIMass',sky_galaxy%HIMass,'[Msun/h] HI mass')
-   call hdf5_write_data(trim(name)//'/H2Mass',sky_galaxy%H2Mass,'[Msun/h] H2 mass')
-   call hdf5_write_data(trim(name)//'/l_x',sky_galaxy%J(1),'[Msun pMpc km/s] x-component of total angular momentum')
-   call hdf5_write_data(trim(name)//'/l_y',sky_galaxy%J(2),'[Msun pMpc km/s] y-component of total angular momentum')
-   call hdf5_write_data(trim(name)//'/l_z',sky_galaxy%J(3),'[Msun pMpc km/s] z-component of total angular momentum')
+   call hdf5_write_data(trim(name)//'/Sfr',sky_galaxy%Sfr,'[Msun/h yr] Star formation rate')
+   call hdf5_write_data(trim(name)//'/BlackHoleMass',sky_galaxy%BlackHoleMass,'[Msun/h] Black Hole Mass')
+   call hdf5_write_data(trim(name)//'/BlackHoleAccretedHotMass',sky_galaxy%BlackHoleAccretedHotMass, &
+   & '[Msun/h] Black hole accreted hot mass')
+   call hdf5_write_data(trim(name)//'/dt',sky_galaxy%dt,'[yr] Time between snapshot')
+   call hdf5_write_data(trim(name)//'/Spin',sky_galaxy%Spin,'Spin of the black home')
    call hdf5_write_data(trim(name)//'/Mvir',sky_galaxy%Mvir,'[Msun/h] subhalo mass')
    
    if (para%line_parameters==1) then
@@ -656,7 +712,7 @@ subroutine make_hdf5
    
    test(1) = n
    test(3) = sum(sky_galaxy%tile)
-   test(4) = sum(sky_galaxy%inclination)
+   test(4) = sum(sky_galaxy%dc)
    test(5) = sum(sky_galaxy%zobs)
    deallocate(sky_galaxy)
    

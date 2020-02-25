@@ -37,25 +37,25 @@ logical function pos_selection(dc,ra,dec) result(selected)
    
    select case (trim(para%survey))
    case ('test')
-      selected = ((ra>=0.0).and.(ra<=60.0).and.(dec>=-5.0).and.(dec<=12.0).and.(dc<1000.0))
-   case ('devils')
-      selected = ((ra>= 34.000).and.(ra<= 37.050).and.(dec>= -5.200).and.(dec<= -4.200)).or. &
-               & ((ra>= 52.263).and.(ra<= 53.963).and.(dec>=-28.500).and.(dec<=-27.500)).or. &
-               & ((ra>=149.380).and.(ra<=150.700).and.(dec>= +1.650).and.(dec<= +2.790))
-   case ('gama')
-      selected = ((ra>= 30.200).and.(ra<= 38.800).and.(dec>=-10.250).and.(dec<= -3.720)).or. &
-               & ((ra> 129.000).and.(ra<=141.000).and.(dec>= -2.000).and.(dec<= +3.000)).or. &
-               & ((ra>=174.000).and.(ra<=186.000).and.(dec>= -3.000).and.(dec<= +2.000)).or. &
-               & ((ra>=211.500).and.(ra<=223.500).and.(dec>= -2.000).and.(dec<= +3.000)).or. &
-               & ((ra>=339.000).and.(ra<=351.000).and.(dec>=-35.000).and.(dec<=-30.000))
-   case ('alfalfa')
-      selected = ((dec>= 0.000).and.(dec<= 36.000)).and. &
-               & (((ra>= 112.500).and.(ra<= 247.500)).or.((ra>= 330.000).or.(ra<= 45.000))).and. &
-               & (dc<260.0)
-   case ('wallaby_micro')
-      selected = (dec<=30.000).and.(dc<=60.0)
-   case ('wallaby_medi')
-      selected = (dec<=30.000).and.(dc>60.0).and.(dc<=750.0)
+      selected = .true.
+   ! case ('devils')
+   !    selected = ((ra>= 34.000).and.(ra<= 37.050).and.(dec>= -5.200).and.(dec<= -4.200)).or. &
+   !             & ((ra>= 52.263).and.(ra<= 53.963).and.(dec>=-28.500).and.(dec<=-27.500)).or. &
+   !             & ((ra>=149.380).and.(ra<=150.700).and.(dec>= +1.650).and.(dec<= +2.790))
+   ! case ('gama')
+   !    selected = ((ra>= 30.200).and.(ra<= 38.800).and.(dec>=-10.250).and.(dec<= -3.720)).or. &
+   !             & ((ra> 129.000).and.(ra<=141.000).and.(dec>= -2.000).and.(dec<= +3.000)).or. &
+   !             & ((ra>=174.000).and.(ra<=186.000).and.(dec>= -3.000).and.(dec<= +2.000)).or. &
+   !             & ((ra>=211.500).and.(ra<=223.500).and.(dec>= -2.000).and.(dec<= +3.000)).or. &
+   !             & ((ra>=339.000).and.(ra<=351.000).and.(dec>=-35.000).and.(dec<=-30.000))
+   ! case ('alfalfa')
+   !    selected = ((dec>= 0.000).and.(dec<= 36.000)).and. &
+   !             & (((ra>= 112.500).and.(ra<= 247.500)).or.((ra>= 330.000).or.(ra<= 45.000))).and. &
+   !             & (dc<260.0)
+   ! case ('wallaby_micro')
+   !    selected = (dec<=30.000).and.(dc<=60.0)
+   ! case ('wallaby_medi')
+   !    selected = (dec<=30.000).and.(dc>60.0).and.(dc<=750.0)
    case default
       call error('Unknown survey name.')
    end select
@@ -71,7 +71,7 @@ logical function sam_selection(sam) result(selected)
    
    select case (trim(para%survey))
    case ('test')
-      selected = (sam%stellarmass>2e9)
+      selected = .true.
    ! case ('devils')
    !    selected = (sam%stellarmass>1e8)
    ! case ('gama')
