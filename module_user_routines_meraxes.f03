@@ -63,6 +63,7 @@ type type_sam
    real*4      :: Sfr                              ! [Msun/h yr] Star formation rate
    real*4      :: BlackHoleMass                    ! [Msun/h] Black hole mass
    real*4      :: BlackHoleAccretedHotMass         ! [Msun/h] Black hole accreted hot mass
+   real*4      :: BlackHoleAccretedColdMass        ! [Msun/h] Black hole accreted colfx mass
    real*4      :: dt                               ! [yr] Time between outputs
    real*4      :: Spin                             ! [Msun/h] Spin of black hole
    real*4      :: mvir                             ! [Msun/h] Virial mass of subhalo
@@ -113,6 +114,7 @@ type,extends(type_sky) :: type_sky_galaxy ! must exist
    real*8      :: Sfr                              ! [Msun/h yr] Star formation rate
    real*8      :: BlackHoleMass                    ! [Msun/h] Black hole mass
    real*8      :: BlackHoleAccretedHotMass         ! [Msun/h] Black hole accreted hot mass
+   real*8      :: BlackHoleAccretedColdMass        ! [Msun/h] Black hole accreted cold mass
    real*8      :: dt                               ! [yr] Time between outputs
    real*8      :: Spin                             ! [Msun/h] Spin of black
 
@@ -232,10 +234,10 @@ subroutine make_sky_galaxy(sky_galaxy,sam,base,groupid,galaxyid)
    real*4                              :: dl                   ! [simulation length units] luminosity distance to observer
    real*4                              :: elos(3)              ! unit vector pointing from the observer to the object in comoving space
    real*4                              :: LBH,LStars,fluxBH,fluxStars
-   real*4                              :: frequency0 = 1420e6
-   real*4                              :: frequency = 1500e6
-   real*4                              :: mu = 0.8
-   real*4                              :: sigma = 0.09
+   real*4,parameter                    :: frequency0 = 1400e6
+   real*4,parameter                    :: frequency = 150e6
+   real*4,parameter                    :: mu = 0.8
+   real*4,parameter                    :: sigma = 0.09
 
    call nil(sky_galaxy,sam,base,groupid,galaxyid) ! dummy statement to avoid compiler warnings
    
@@ -256,11 +258,12 @@ subroutine make_sky_galaxy(sky_galaxy,sam,base,groupid,galaxyid)
    sky_galaxy%mvir   = sam%mvir
    
    ! intrinsic masses
-   sky_galaxy%Sfr                      = sam%Sfr
-   sky_galaxy%BlackHoleMass            = sam%BlackHoleMass
-   sky_galaxy%BlackHoleAccretedHotMass = sam%BlackHoleAccretedHotMass
-   sky_galaxy%dt                       = sam%dt
-   sky_galaxy%Spin                     = sam%Spin
+   sky_galaxy%Sfr                        = sam%Sfr
+   sky_galaxy%BlackHoleMass              = sam%BlackHoleMass
+   sky_galaxy%BlackHoleAccretedHotMass   = sam%BlackHoleAccretedHotMass
+   sky_galaxy%BlackHoleAccretedColdMass  = sam%BlackHoleAccretedColdMass
+   sky_galaxy%dt                         = sam%dt
+   sky_galaxy%Spin                       = sam%Spin
    
    ! intrinsic angular momentum
    pseudo_rotation   = tile(base%tile)%Rpseudo
@@ -275,12 +278,15 @@ subroutine make_sky_galaxy(sky_galaxy,sam,base,groupid,galaxyid)
 
    sky_galaxy%fluxBH = scaledFluxDensity(fluxBH,frequency,frequency0,mu,sigma,snapshot(sam%snapshot)%redshift,.false.)
 
-   LStars = Lnu_SFR(sky_galaxy%SFR)
+   if (sky_galaxy%SFR>0) then
+      LStars = Lnu_SFR(sky_galaxy%SFR)
 
-   fluxStars = fluxDensity(LBH,snapshot(sam%snapshot)%redshift)
+      fluxStars = fluxDensity(LStars,snapshot(sam%snapshot)%redshift)
 
-   sky_galaxy%fluxStars = scaledFluxDensity(fluxStars,frequency,frequency0,mu,sigma,snapshot(sam%snapshot)%redshift,.true.)
-   
+      sky_galaxy%fluxStars = scaledFluxDensity(fluxStars,frequency,frequency0,mu,sigma,snapshot(sam%snapshot)%redshift,.false.)
+   end if
+
+
 contains
 
    function M_Eddington(BHMass) result(rate_Eddington)
@@ -294,7 +300,7 @@ contains
 
       L_Eddington = 4 * pi * G * BHMass * c /  (eScatteringOpacity* 0.01**2 / 0.001) ! [g] [m]^4 / ([cm]^2 [s]3)
 
-      rate_Eddington = L_Eddington / c**2 * (100 * 0.01)**2 * (0.001 / 0.001 ) / accretionEfficiency ! [kg]/[s]
+      rate_Eddington = L_Eddington / c**2 / accretionEfficiency ! [kg]/[s]
 
    end function M_Eddington
 
@@ -315,7 +321,7 @@ contains
 
       BHMass = sky_galaxy%BlackHoleMass * 1e10 * Msun ! kg
 
-      dm = (sky_galaxy%BlackHoleAccretedHotMass+sky_galaxy%BlackHoleAccretedHotMass)*1e10 * Msun
+      dm = (sky_galaxy%BlackHoleAccretedHotMass+sky_galaxy%BlackHoleAccretedColdMass)*1e10_8 * Msun
       dt = sky_galaxy%dt*1e6*365*24*60*60
       accretion_rate = dm/dt
       accretion_rate = accretion_rate/M_Eddington(BHMass)
@@ -350,7 +356,7 @@ contains
       real*8,intent(in)                      :: SFR
       real*8                                 :: Lnu
 
-      Lnu =  SFR / (0.75 * 10**(-21)) ! [erg] /[s] /[Hz]
+      Lnu =  SFR / (7.5_8 * 1E-29_8) ! [erg] /[s] /[Hz]
 
    end function Lnu_SFR
 
@@ -386,21 +392,23 @@ contains
       implicit none
       real*4,intent(in)                      :: fluxDensity
       real*4,intent(in)                      :: frequency
-      real*4,intent(inout)                   :: frequency0
+      real*4,intent(in)                      :: frequency0
       real*4,intent(in)                      :: mu
       real*4,intent(in)                      :: sigma
       real*4,intent(in)                      :: redshift
       logical,intent(in)                     :: redshiftFreq
+      real*4                                 :: redshiftedFrequency
       real*4                                 :: gamma
       real*4                                 :: scaledFlux
 
       gamma = get_normal_random_number(mu,sigma)
 
       if (redshiftFreq) then
-         frequency0 = frequencyRedshift(redshift,frequency0)
+         redshiftedFrequency = frequencyRedshift(redshift,frequency0)
+         scaledFlux = fluxDensity * (redshiftedFrequency/frequency0)**(-gamma)
+      else
+         scaledFlux = fluxDensity * (frequency/frequency0)**(-gamma)
       end if
-
-      scaledFlux = fluxDensity * (frequency/frequency0)**(-gamma)
 
    end function scaledFluxDensity
    
@@ -444,13 +452,8 @@ subroutine make_automatic_parameters
    integer*4                    :: ncores
    character(*),parameter       :: g = '/InputParams/'  ! Dataset name
    real*4                       :: baryon_frac
-   
-   filename = ''
-   para%snapshot_min = 0
-   para%snapshot_max = 163
 
    write(filename,'(A,A)') trim(para%path_input),'/meraxes.hdf5'
-
 
    call out('File of automatic parameters: '//trim(filename))
    call hdf5_open(filename)
@@ -543,6 +546,7 @@ subroutine load_sam_snapshot(index,subindex,sam)
    call hdf5_read_data(g,sam%Sfr,field_name='Sfr')
    call hdf5_read_data(g,sam%BlackHoleMass,field_name='BlackHoleMass')
    call hdf5_read_data(g,sam%BlackHoleAccretedHotMass,field_name='BlackHoleAccretedHotMass')
+   call hdf5_read_data(g,sam%BlackHoleAccretedColdMass,field_name='BlackHoleAccretedColdMass')
    call hdf5_read_data(g,sam%dt,field_name='dt')
    call hdf5_read_data(g,sam%Spin,field_name='Spin')
    call hdf5_read_data(g,sam%mvir,field_name='Mvir')
@@ -689,13 +693,15 @@ subroutine make_hdf5
    call hdf5_write_data(trim(name)//'/vpec_y',sky_galaxy%vpec(2),'[proper km/s] y-component of peculiar velocity')
    call hdf5_write_data(trim(name)//'/vpec_z',sky_galaxy%vpec(3),'[proper km/s] z-component of peculiar velocity')
    call hdf5_write_data(trim(name)//'/vpec_r',sky_galaxy%vpecrad,'[proper km/s] line-of-sight peculiar velocity')
-   ! call hdf5_write_data(trim(name)//'/fluxBH',sky_galaxy%fluxBH,'[ergs/s /Hz] BlackHole flux')
-   ! call hdf5_write_data(trim(name)//'/fluxStars',sky_galaxy%fluxStars,'[ergs/s /Hz] Stars flux')
-   call hdf5_write_data(trim(name)//'/stellarmass',sky_galaxy%stellarmass,'[Msun/h] stellar mass')
+   call hdf5_write_data(trim(name)//'/fluxBH',sky_galaxy%fluxBH,'[ergs/s /Hz] BlackHole flux')
+   call hdf5_write_data(trim(name)//'/fluxStars',sky_galaxy%fluxStars,'[ergs/s /Hz] Stars flux')
+   ! call hdf5_write_data(trim(name)//'/stellarmass',sky_galaxy%stellarmass,'[Msun/h] stellar mass')
    call hdf5_write_data(trim(name)//'/Sfr',sky_galaxy%Sfr,'[Msun/h yr] Star formation rate')
    call hdf5_write_data(trim(name)//'/BlackHoleMass',sky_galaxy%BlackHoleMass,'[Msun/h] Black Hole Mass')
    call hdf5_write_data(trim(name)//'/BlackHoleAccretedHotMass',sky_galaxy%BlackHoleAccretedHotMass, &
    & '[Msun/h] Black hole accreted hot mass')
+   call hdf5_write_data(trim(name)//'/BlackHoleAccretedColdMass',sky_galaxy%BlackHoleAccretedColdMass, &
+   & '[Msun/h] Black hole accreted cold mass')
    call hdf5_write_data(trim(name)//'/dt',sky_galaxy%dt,'[yr] Time between snapshot')
    call hdf5_write_data(trim(name)//'/Spin',sky_galaxy%Spin,'Spin of the black home')
    call hdf5_write_data(trim(name)//'/Mvir',sky_galaxy%Mvir,'[Msun/h] subhalo mass')
